@@ -11,9 +11,9 @@ import re
 import openpyxl
 
 # 待查公司的Excel文件地址
-company_name_file_path = 'E:/boss_zhipin/company_name.xlsx'
+company_name_file_path = 'E:/boss_zhipin/medical_company_name.xlsx'
 # 爬取结果保存excel文件地址
-save_file_path = 'E:/boss_zhipin/company_info.xlsx'
+save_file_path = 'E:/boss_zhipin/medical_company_info.xlsx'
 # 保存到的sheet名称
 save_sheet_name = 'company'
 
@@ -27,7 +27,7 @@ sheet = wb.active
 column_values = [cell.value for cell in sheet['A']]
 
 # BOSS招聘网站
-url = "https://www.zhipin.com/wuhan/"
+url = "https://www.zhipin.com/?city=100010000&ka=city-sites-100010000"
 # 创建谷歌浏览器
 browser = uc.Chrome()
 # 打开网页
@@ -61,11 +61,10 @@ for search_company_name in column_values:
 
     # 定位到包含所需信息的元素
     info_primary = browser.find_element(By.XPATH,
-                                        "//div[@class='company-new']/div[@class='company-banner ']/div[@class='inner home-inner']/div/div[@class='info-primary']")
+                                        "//div[@class='inner home-inner']/div/div[@class='info-primary']")
     # 提取公司名字
     company_name = info_primary.find_element(By.XPATH, ".//div[@class='info']/h1[@class='name']").text
     company_name = company_name.split('收藏')[0].strip()  # 移除公司名后面跟随的“收藏”
-    print('公司名字：', company_name)
 
     info_text = info_primary.find_element(By.XPATH, ".//div[@class='info']/p").text
     match = re.search(r'^(\D+)(\d+-\d+人)(\D+)$', info_text)
@@ -94,16 +93,25 @@ for search_company_name in column_values:
     job_box = browser.find_element(By.CLASS_NAME, "job-box")
 
     # 提取公司简介
-    company_intro = job_box.find_element(By.XPATH,
-                                         ".//div[@class='job-sec'][h3='公司简介']/div[@class='text fold-text']").text
+    try:
+        company_intro = job_box.find_element(By.XPATH,
+                                             ".//div[@class='job-sec'][h3='公司简介']/div[@class='text fold-text']").text
+    except:
+        company_intro = 'NAN'
 
     # 提取成立时间
-    established_time = job_box.find_element(By.XPATH, ".//li[@class='business-detail-time']").text
-    established_time = established_time.split('\n')[-1]
+    try:
+        established_time = job_box.find_element(By.XPATH, ".//li[@class='business-detail-time']").text
+        established_time = established_time.split('\n')[-1]
+    except:
+        established_time = 'NAN'
 
     # 提取注册资本
-    registered_capital = job_box.find_element(By.XPATH, ".//li[@class='business-detail-money']").text
-    registered_capital = registered_capital.split('\n')[-1]
+    try:
+        registered_capital = job_box.find_element(By.XPATH, ".//li[@class='business-detail-money']").text
+        registered_capital = registered_capital.split('\n')[-1]
+    except:
+        registered_capital = 'NAN'
 
     # 提取公司地址
     # company_address = job_box.find_element(By.XPATH, ".//div[@class='job-location']/div[@class='location-item show-map']/div[@class='location-address']").text
@@ -122,25 +130,27 @@ for search_company_name in column_values:
     company_info = info + [company_intro, established_time, registered_capital, company_address]
     company_lis.append(company_info)
 
-# -------------保存爬取的数据到excel------------------------
-# 获取指定的文件
-wb = openpyxl.load_workbook(save_file_path)
-# 获取指定的sheet
-ws = wb[save_sheet_name]
-# 获得最大行数
-max_row_num = ws.max_row
-# 获得最大列数
-max_col_num = ws.max_column
+    # -------------保存爬取的数据到excel------------------------
+    # 获取指定的文件
+    wb = openpyxl.load_workbook(save_file_path)
+    # 获取指定的sheet
+    ws = wb[save_sheet_name]
+    # 获得最大行数
+    max_row_num = ws.max_row
+    # 获得最大列数
+    max_col_num = ws.max_column
 
-# 将当前行设置为最大行数
-ws._current_row = max_row_num
+    # 将当前行设置为最大行数
+    ws._current_row = max_row_num
 
-# 使用append方法，将行数据按行追加写入
-for company_li in company_lis:
-    ws.append(company_li)
+    ws.append(company_info)
 
-# 保存文件
-wb.save(save_file_path)
+    # 保存文件
+    wb.save(save_file_path)
+
+    print('finish 公司名字：', company_name)
 
 browser.close()
 browser.quit()
+
+print('finish all')
